@@ -1,46 +1,52 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { query } from "@/lib/db"
-import { isAdmin } from "@/lib/auth"
+import { NextRequest, NextResponse } from "next/server";
+import { isAdmin } from "@/lib/auth";
+import { query } from "@/lib/db";
+import scrapeMeesho from "../scrappers/meeso"; // Adjust path based on where route.ts is located
+
+interface Product {
+  title: string;
+  price: string;
+}
 
 // GET /api/products - Get all products with pagination and search
 export async function GET(req: NextRequest) {
   try {
-    // Check if user is admin
-    const isAdminUser = await isAdmin(req)
+    const isAdminUser = await isAdmin(req);
     if (!isAdminUser) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
-    const search = searchParams.get("search") || ""
-    const offset = (page - 1) * limit
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const search = searchParams.get("search") || "";
+    const offset = (page - 1) * limit;
 
-    // Build the query based on search parameters
     let sql = `
       SELECT p.*, c.name as category
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
-    `
+    `;
 
-    const queryParams: any[] = []
+    const queryParams: any[] = [];
 
     if (search) {
-      sql += ` WHERE p.name LIKE ? OR p.description LIKE ?`
-      queryParams.push(`%${search}%`, `%${search}%`)
+      sql += ` WHERE p.name LIKE ? OR p.description LIKE ?`;
+      queryParams.push(`%${search}%`, `%${search}%`);
     }
 
-    // Get total count for pagination
-    const countSql = `SELECT COUNT(*) as total FROM products ${search ? "WHERE name LIKE ? OR description LIKE ?" : ""}`
-    const countResult = (await query(countSql, search ? [`%${search}%`, `%${search}%`] : [])) as any[]
-    const total = countResult[0].total
+    const countSql = `
+      SELECT COUNT(*) as total FROM products
+      ${search ? "WHERE name LIKE ? OR description LIKE ?" : ""}
+    `;
+    const countArgs = search ? [`%${search}%`, `%${search}%`] : [];
+    const countResult = (await query(countSql, countArgs)) as any[];
+    const total = countResult[0].total;
 
-    // Add pagination
-    sql += ` ORDER BY p.created_at DESC LIMIT ? OFFSET ?`
-    queryParams.push(limit, offset)
+    sql += ` ORDER BY p.created_at DESC LIMIT ? OFFSET ?`;
+    queryParams.push(limit, offset);
 
-    const products = await query(sql, queryParams)
+    const products = await query(sql, queryParams);
 
     return NextResponse.json({
       products,
@@ -48,50 +54,93 @@ export async function GET(req: NextRequest) {
       limit,
       totalItems: total,
       totalPages: Math.ceil(total / limit),
-    })
+    });
   } catch (error) {
-    console.error("Error fetching products:", error)
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+    console.error("Error fetching products:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
 
-// POST /api/products - Create a new product
+// POST /api/products - Create a new product from Meesho URL
 export async function POST(req: NextRequest) {
   try {
-    // Check if user is admin
-    const isAdminUser = await isAdmin(req)
+    const isAdminUser = await isAdmin(req);
     if (!isAdminUser) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, slug, description, price, stock, category_id, image_url } = await req.json()
+          const formData = await req.formData(); // or receive as parameter if using server action
+          const brandIdRaw = formData.get("brand_id");
+          const productUrl = formData.get("product_url");
 
-    // Validate required fields
-    if (!name || !slug || !price) {
-      return NextResponse.json({ message: "Name, slug, and price are required" }, { status: 400 })
-    }
+          if (!productUrl || typeof productUrl !== "string") {
+            console.error("Invalid or missing product_url", formData);
+            return NextResponse.json({ message: "Invalid or missing product_url" }, { status: 200 });
+          }
 
-    // Check if slug already exists
-    const existingProducts = (await query("SELECT id FROM products WHERE slug = ?", [slug])) as any[]
+          const brand_id = brandIdRaw ? parseInt(brandIdRaw.toString(), 10) : null;
 
-    if (existingProducts.length > 0) {
-      return NextResponse.json({ message: "A product with this slug already exists" }, { status: 400 })
-    }
+          if (!brand_id || isNaN(brand_id)) {
+            console.error("Invalid or missing brand_id", formData);
+            throw new Error("Invalid or missing brand ID");
+          }
+          return NextResponse.json({ message: "Internal server error" }, { url: productUrl });
+          const response = await scrapeMeesho(productUrl);
+          console.log(678)
+          console.log("Scraped products:", response);
+    
 
-    // Insert the new product
-    const result = (await query(
-      `INSERT INTO products (name, slug, description, price, stock, category_id, image_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [name, slug, description, price, stock || 0, category_id, image_url],
-    )) as any
+    // if (!product_url || !brand_id) {
+    //   return NextResponse.json(
+    //     { message: "Missing product_url or brand_id" },
+    //     { status: 400 }
+    //   );
+    // }
 
-    // Get the newly created product
-    const newProduct = (await query("SELECT * FROM products WHERE id = ?", [result.insertId])) as any[]
+    // const scrapedProducts = await scrapeMeesho(product_url);
+    // if (!scrapedProducts.length) {
+    //   return NextResponse.json(
+    //     { message: "No products found at the provided URL" },
+    //     { status: 404 }
+    //   );
+    // }
 
-    return NextResponse.json({ message: "Product created successfully", product: newProduct[0] }, { status: 201 })
+    // // Example: Inserting the first scraped product
+    // const { title, price } = scrapedProducts[0];
+    // const slug = title.toLowerCase().replace(/\s+/g, "-");
+
+    // // Check if product already exists
+    // const existing = (await query(
+    //   "SELECT id FROM affiliate_products WHERE slug = ?",
+    //   [slug]
+    // )) as any[];
+
+    // if (existing.length > 0) {
+    //   return NextResponse.json(
+    //     { message: "Product with this slug already exists" },
+    //     { status: 400 }
+    //   );
+    // }
+
+    // const result = (await query(
+    //   `
+    //   INSERT INTO affiliate_products (brand_id, name, slug, price, affiliate_link)
+    //   VALUES (?, ?, ?, ?, ?)
+    //   `,
+    //   [brand_id, title, slug, price, product_url]
+    // )) as any;
+
+    // const newProduct = (await query(
+    //   "SELECT * FROM affiliate_products WHERE id = ?",
+    //   [result.insertId]
+    // )) as any[];
+
+    // return NextResponse.json(
+    //   { message: "Product created successfully", product: 123 },
+    //   { status: 201 }
+    // );
   } catch (error) {
-    console.error("Error creating product:", error)
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+    console.error("Error creating product:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
-

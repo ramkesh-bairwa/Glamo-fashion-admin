@@ -52,6 +52,7 @@ export default function DashboardLayout({
   const navigation = [
     // { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Dashboard", href: "/dashboard/home", icon: LayoutDashboard },
+    { name: "Categories", href: "/dashboard/categories", icon: Package },
     { name: "Brands", href: "/dashboard/brands", icon: Tag },
     { name: "Products", href: "/dashboard/products", icon: Package },
     { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
