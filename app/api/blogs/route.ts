@@ -68,4 +68,15 @@ export async function POST(req: NextRequest) {
     if (!isAdminUser) {
       return NextResponse.json(
         { message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
+    // You can add your blog creation logic here later
+
+    return NextResponse.json({ message: "Blog created" }, { status: 201 });
+  } catch (error) {
+    console.error("Error creating blog:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
+}
