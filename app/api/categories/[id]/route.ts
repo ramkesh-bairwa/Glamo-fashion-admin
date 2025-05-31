@@ -6,16 +6,17 @@ import path from "path"
 import { v4 as uuidv4 } from "uuid"
 
 // GET /api/brands/[id] - Get a single brand
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    // Check if user is admin
     const isAdminUser = await isAdmin(req)
     if (!isAdminUser) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const id = params.id
-
+    const { id } = context.params
     const brands = (await query("SELECT * FROM brands WHERE id = ?", [id])) as any[]
 
     if (brands.length === 0) {
@@ -30,14 +31,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PUT /api/brands/[id] - Update a brand
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
     const isAdminUser = await isAdmin(req)
     if (!isAdminUser) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = context.params
     const formData = await req.formData()
 
     const name = formData.get("name") as string
@@ -51,19 +55,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ message: "Name and slug are required" }, { status: 400 })
     }
 
-    // Check if brand exists
     const existingBrands = await query("SELECT id FROM brands WHERE id = ?", [id]) as any[]
     if (existingBrands.length === 0) {
       return NextResponse.json({ message: "Brand not found" }, { status: 404 })
     }
 
-    // Check for duplicate slug
     const slugCheck = await query(
       "SELECT id FROM brands WHERE slug = ? AND id != ?",
       [slug, id]
     ) as any[]
     if (slugCheck.length > 0) {
-      return NextResponse.json({ message: "A different brands with this slug already exists" }, { status: 400 })
+      return NextResponse.json({ message: "A different brand with this slug already exists" }, { status: 400 })
     }
 
     let iconFilename: string | null = null
@@ -97,47 +99,45 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     })
 
   } catch (error) {
-    console.error("Error updating brands:", error)
+    console.error("Error updating brand:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
 
 // DELETE /api/brands/[id] - Delete a brand
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    // Check if user is admin
     const isAdminUser = await isAdmin(req)
     if (!isAdminUser) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = context.params
 
-    // Check if brands exists
     const existingBrand = (await query("SELECT id FROM brands WHERE id = ?", [id])) as any[]
-
     if (existingBrand.length === 0) {
       return NextResponse.json({ message: "Brand not found" }, { status: 404 })
     }
 
-    // Check if brands is used by any products
-    const productsUsingBrand = (await query("SELECT COUNT(*) as count FROM products WHERE category_id = ?", [
-      id,
-    ])) as any[]
+    // Check if brand is used by any products
+    const productsUsingBrand = await query(
+      "SELECT COUNT(*) as count FROM products WHERE brand_id = ?",
+      [id]
+    ) as any[]
 
     if (productsUsingBrand[0].count > 0) {
-      return NextResponse.json({ message: "Cannot delete brands because it is used by products" }, { status: 400 })
+      return NextResponse.json({ message: "Cannot delete brand because it is used by products" }, { status: 400 })
     }
 
-    // Delete the brands
     await query("DELETE FROM brands WHERE id = ?", [id])
 
-    return NextResponse.json({
-      message: "Brand deleted successfully",
-    })
+    return NextResponse.json({ message: "Brand deleted successfully" })
+
   } catch (error) {
     console.error("Error deleting brand:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
-
