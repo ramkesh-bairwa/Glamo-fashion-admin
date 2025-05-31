@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isAdmin } from "@/lib/auth"
 import { query } from "@/lib/db"
-import { writeFile } from "fs/promises"
-import path from "path"
-import { v4 as uuidv4 } from "uuid"
 
-// GET /api/brands/[id] - Get a single brand
+// GET /api/categories/[id] - Get single category
 export async function GET(
   req: NextRequest,
   context: { params: { id: string } }
@@ -17,94 +14,20 @@ export async function GET(
     }
 
     const { id } = context.params
-    const brands = (await query("SELECT * FROM brands WHERE id = ?", [id])) as any[]
+    const categories = await query("SELECT * FROM categories WHERE id = ?", [id]) as any[]
 
-    if (brands.length === 0) {
-      return NextResponse.json({ message: "Brand not found" }, { status: 404 })
+    if (categories.length === 0) {
+      return NextResponse.json({ message: "Category not found" }, { status: 404 })
     }
 
-    return NextResponse.json(brands[0])
+    return NextResponse.json(categories[0])
   } catch (error) {
-    console.error("Error fetching brand:", error)
+    console.error("Error fetching category:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
 
-// PUT /api/brands/[id] - Update a brand
-export async function PUT(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
-  try {
-    const isAdminUser = await isAdmin(req)
-    if (!isAdminUser) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-    }
-
-    const { id } = context.params
-    const formData = await req.formData()
-
-    const name = formData.get("name") as string
-    const slug = formData.get("slug") as string
-    const description = formData.get("description") as string
-    const domain = formData.get("domain") as string
-    const brandUrl = formData.get("brand_url") as string
-    const file = formData.get("file") as File | null
-
-    if (!name || !slug) {
-      return NextResponse.json({ message: "Name and slug are required" }, { status: 400 })
-    }
-
-    const existingBrands = await query("SELECT id FROM brands WHERE id = ?", [id]) as any[]
-    if (existingBrands.length === 0) {
-      return NextResponse.json({ message: "Brand not found" }, { status: 404 })
-    }
-
-    const slugCheck = await query(
-      "SELECT id FROM brands WHERE slug = ? AND id != ?",
-      [slug, id]
-    ) as any[]
-    if (slugCheck.length > 0) {
-      return NextResponse.json({ message: "A different brand with this slug already exists" }, { status: 400 })
-    }
-
-    let iconFilename: string | null = null
-
-    if (file && file.size > 0) {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const extension = file.name.split('.').pop()
-      iconFilename = `${uuidv4()}.${extension}`
-      const filePath = path.join(process.cwd(), "public/uploads/brand-icons", iconFilename)
-      await writeFile(filePath, buffer)
-    }
-
-    const updateFields = [name, slug, description, domain, brandUrl]
-    let queryStr = `UPDATE brands SET name = ?, slug = ?, description = ?, domain = ?, brand_url = ?`
-
-    if (iconFilename) {
-      queryStr += `, icon = ?`
-      updateFields.push(iconFilename)
-    }
-
-    queryStr += ` WHERE id = ?`
-    updateFields.push(id)
-
-    await query(queryStr, updateFields)
-
-    const updatedBrand = await query("SELECT * FROM brands WHERE id = ?", [id]) as any[]
-
-    return NextResponse.json({
-      message: "Brand updated successfully",
-      brand: updatedBrand[0],
-    })
-
-  } catch (error) {
-    console.error("Error updating brand:", error)
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
-  }
-}
-
-// DELETE /api/brands/[id] - Delete a brand
+// DELETE /api/categories/[id] - Delete category
 export async function DELETE(
   req: NextRequest,
   context: { params: { id: string } }
@@ -117,27 +40,25 @@ export async function DELETE(
 
     const { id } = context.params
 
-    const existingBrand = (await query("SELECT id FROM brands WHERE id = ?", [id])) as any[]
-    if (existingBrand.length === 0) {
-      return NextResponse.json({ message: "Brand not found" }, { status: 404 })
+    const existingCategory = await query("SELECT * FROM categories WHERE id = ?", [id]) as any[]
+    if (existingCategory.length === 0) {
+      return NextResponse.json({ message: "Category not found" }, { status: 404 })
     }
 
-    // Check if brand is used by any products
-    const productsUsingBrand = await query(
-      "SELECT COUNT(*) as count FROM products WHERE brand_id = ?",
+    // Optional: Check if any products use this category
+    const productsUsingCategory = await query(
+      "SELECT COUNT(*) as count FROM products WHERE category_id = ?",
       [id]
     ) as any[]
 
-    if (productsUsingBrand[0].count > 0) {
-      return NextResponse.json({ message: "Cannot delete brand because it is used by products" }, { status: 400 })
+    if (productsUsingCategory[0].count > 0) {
+      return NextResponse.json({ message: "Cannot delete category as it is in use" }, { status: 400 })
     }
 
-    await query("DELETE FROM brands WHERE id = ?", [id])
-
-    return NextResponse.json({ message: "Brand deleted successfully" })
-
+    await query("DELETE FROM categories WHERE id = ?", [id])
+    return NextResponse.json({ message: "Category deleted successfully" })
   } catch (error) {
-    console.error("Error deleting brand:", error)
+    console.error("Error deleting category:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
