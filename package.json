@@ -8,7 +8,8 @@
   "build": "vite build",
   "lint": "eslint .",
   "preview": "vite preview",
-  "start": "vite preview"
+  "start": "vite preview",
+  "start:dev": "PORT=5000 vite"
 },
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.2",
