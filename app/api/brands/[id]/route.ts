@@ -6,10 +6,10 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
 // GET /api/brands/[id] - Get a single brand
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
   try {
     const nextReq = req as NextRequest;
-    // Check if user is admin
     const isAdminUser = await isAdmin(nextReq);
     if (!isAdminUser) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -31,7 +31,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // PUT /api/brands/[id] - Update a brand
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
   try {
     const nextReq = req as NextRequest;
     const isAdminUser = await isAdmin(nextReq);
@@ -107,10 +108,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 // DELETE /api/brands/[id] - Delete a brand
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
   try {
     const nextReq = req as NextRequest;
-    // Check if user is admin
     const isAdminUser = await isAdmin(nextReq);
     if (!isAdminUser) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
