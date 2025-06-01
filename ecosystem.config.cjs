@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "glamo-admin",
       script: "serve",
-      args: "-s dist -l 3001",
+      args: "dist -l 3001",
       env: {
         NODE_ENV: "production",
       },
