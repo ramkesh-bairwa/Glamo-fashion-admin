@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   base: '/admin/',
   server: {
-    port: parseInt(process.env.PORT) || 5000,
+    port: parseInt(process.env.PORT) || 3001,
   },
   preview: {
-    port: parseInt(process.env.PORT) || 5000,
+    port: parseInt(process.env.PORT) || 3001,
   },
 });

@@ -4,7 +4,7 @@ module.exports = {
     {
       name: "glamo-admin",
       script: "npx",
-      args: ["serve", "-s", "dist", "--listen=5000"],
+      args: ["serve", "-s", "dist", "--listen=3001"],
       exec_mode: "fork",
       wait_ready: false,
       env: {
