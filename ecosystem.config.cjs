@@ -2,9 +2,8 @@ module.exports = {
   apps: [
     {
       name: "glamo-admin",
-      script: "serve",
-      args: ["-s", "dist", "-l", "5000"],
-      interpreter: "node", // Important: This runs 'serve' as a Node.js CLI tool
+      script: "npx",
+      args: ["serve", "-s", "dist", "--listen=5000"],
       env: {
         NODE_ENV: "production",
       },
