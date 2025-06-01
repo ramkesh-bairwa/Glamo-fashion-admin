@@ -1,4 +1,5 @@
-module.exports = {
+// ecosystem.config.js
+export default {
   apps: [
     {
       name: "glamo-admin",
