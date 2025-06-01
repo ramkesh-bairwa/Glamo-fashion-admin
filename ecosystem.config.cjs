@@ -1,9 +1,9 @@
 module.exports = {
   apps: [
     {
-      name: "glamo-admin",
+      name: "glamo-ad",
       script: "serve",
-      args: "dist -l 3001",
+      args: "-s dist -l 8080",
       env: {
         NODE_ENV: "production",
       },
