@@ -3,10 +3,8 @@ module.exports = {
     {
       name: "glamo-admin",
       script: "serve",
-      args: "dist -l 5000 --single",
-      interpreter: "bash",
-      autorestart: true,
-      watch: false,
+      args: ["-s", "dist", "-l", "5000"],
+      interpreter: "node", // VERY IMPORTANT!
       env: {
         NODE_ENV: "production",
       },
