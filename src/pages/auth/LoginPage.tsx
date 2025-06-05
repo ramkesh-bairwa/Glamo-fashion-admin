@@ -1,29 +1,41 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks';
 import { login } from '../../store/auth/authSlice';
 import { LoginCredentials } from '../../types/auth';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
+    const navigate = useNavigate(); // ✅
+
   const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.auth);
+  // const { loading, error } = useAppSelector((state) => state.auth);
   const [showPassword, setShowPassword] = useState(false);
-  
+  const { user, loading, error } = useAppSelector((state) => state.auth);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginCredentials>({
     defaultValues: {
-      email: 'admin@example.com',
-      password: 'admin123',
+      email: '',
+      password: '',
     },
   });
   
   const onSubmit = (data: LoginCredentials) => {
     dispatch(login(data));
   };
+
+useEffect(() => {
+  if (user && !loading) {
+    navigate('/dashboard');
+  }
+}, [user, loading]);
+
+
   
   return (
     <div className="flex min-h-screen  bg-[url('/uploads/login/bg.jpg')] bg-cover bg-center bg-no-repeat">

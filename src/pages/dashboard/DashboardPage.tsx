@@ -5,6 +5,7 @@ import RevenueChart from './components/RevenueChart';
 import TopSellingProducts from './components/TopSellingProducts';
 
 const DashboardPage: React.FC = () => {
+ 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

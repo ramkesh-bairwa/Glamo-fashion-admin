@@ -1,24 +1,20 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { toast } from 'react-toastify';
-import { loginApi, checkAuthApi, logoutApi } from '../../api/authApi';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { LoginCredentials } from '../../types/auth';
+import axiosInstance from '../../api/axiosInstance';
 
 interface AuthState {
+  user: any | null;
   isAuthenticated: boolean;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-  } | null;
   loading: boolean;
   error: string | null;
 }
 
+const storedUser = localStorage.getItem('adminInfo');
+
 const initialState: AuthState = {
-  isAuthenticated: false,
-  user: null,
-  loading: true,
+  user: storedUser ? JSON.parse(storedUser) : null,
+  isAuthenticated: !!localStorage.getItem('adminToken'),
+  loading: false,
   error: null,
 };
 
@@ -26,57 +22,42 @@ export const login = createAsyncThunk(
   'auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
-      const response = await loginApi(credentials);
-      return response.data;
+      const response = await axiosInstance.post('/admin-auth/login', credentials);
+      if (response.data.status) {
+        localStorage.setItem('adminToken', response.data.data.access_token);
+        localStorage.setItem('adminInfo', JSON.stringify(response.data.data.admin_info));
+        return response.data.data.admin_info;
+      }
+      return rejectWithValue(response.data.message);
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
   }
 );
 
-export const checkAuth = createAsyncThunk(
-  'auth/checkAuth', 
-  async (_, { rejectWithValue }) => {
-    try {
-      // For demo purposes, we'll simulate an auth check
-      // In a real app, you would call an API endpoint
-      const isAuthenticated = localStorage.getItem('adminToken') !== null;
-      
-      if (isAuthenticated) {
-        // Simulating user data retrieval
-        return {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@example.com',
-          role: 'admin',
-        };
-      }
-      
-      return null;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Auth check failed');
-    }
+export const checkAuth = createAsyncThunk('auth/checkAuth', async () => {
+  const token = localStorage.getItem('adminToken');
+  const userStr = localStorage.getItem('adminInfo');
+  if (token && userStr) {
+    return JSON.parse(userStr);
   }
-);
+  return null;
+});
 
-export const logout = createAsyncThunk(
-  'auth/logout',
-  async (_, { rejectWithValue }) => {
-    try {
-      await logoutApi();
-      return;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Logout failed');
-    }
-  }
-);
+export const logout = createAsyncThunk('auth/logout', async () => {
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('adminInfo');
+});
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    clearError: (state) => {
-      state.error = null;
+    logoutSuccess: (state) => {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminInfo');
+      state.user = null;
+      state.isAuthenticated = false;
     },
   },
   extraReducers: (builder) => {
@@ -85,34 +66,22 @@ const authSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action: PayloadAction<any>) => {
-        state.isAuthenticated = true;
-        state.user = action.payload;
+      .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
-        state.error = null;
-        
-        // For demo, store a token in localStorage
-        localStorage.setItem('adminToken', 'demo-token-123456');
-        
-        toast.success('Login successful!');
+        state.user = action.payload;
+        state.isAuthenticated = true;
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-        toast.error(action.payload as string || 'Login failed');
       })
       .addCase(checkAuth.pending, (state) => {
         state.loading = true;
       })
       .addCase(checkAuth.fulfilled, (state, action) => {
         state.loading = false;
-        if (action.payload) {
-          state.isAuthenticated = true;
-          state.user = action.payload;
-        } else {
-          state.isAuthenticated = false;
-          state.user = null;
-        }
+        state.user = action.payload;
+        state.isAuthenticated = !!action.payload;
       })
       .addCase(checkAuth.rejected, (state) => {
         state.loading = false;
@@ -120,13 +89,11 @@ const authSlice = createSlice({
         state.user = null;
       })
       .addCase(logout.fulfilled, (state) => {
-        state.isAuthenticated = false;
         state.user = null;
-        localStorage.removeItem('adminToken');
-        toast.success('Logged out successfully');
-      });
+        state.isAuthenticated = false;
+      })
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { logoutSuccess } = authSlice.actions;
 export default authSlice.reducer;
