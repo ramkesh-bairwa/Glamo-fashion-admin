@@ -9,41 +9,42 @@ import { Brand } from '../../types/brand';
 const BrandsPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { brands, loading } = useAppSelector((state) => state.brands);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [brandToDelete, setBrandToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
   
   useEffect(() => {
     dispatch(fetchBrands());
   }, [dispatch]);
-  
+
   const handleAddBrand = () => {
     dispatch(setSelectedBrand(null));
     setIsModalOpen(true);
   };
-  
+
   const handleEditBrand = (brand: Brand) => {
     dispatch(setSelectedBrand(brand));
     setIsModalOpen(true);
   };
-  
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     dispatch(setSelectedBrand(null));
   };
-  
+
   const handleOpenDeleteModal = (id: string) => {
     setBrandToDelete(id);
     setIsDeleteModalOpen(true);
   };
-  
+
   const handleCloseDeleteModal = () => {
     setIsDeleteModalOpen(false);
     setBrandToDelete(null);
   };
-  
+
   const handleDeleteBrand = () => {
     if (brandToDelete) {
       dispatch(deleteBrand(brandToDelete));
@@ -51,12 +52,12 @@ const BrandsPage: React.FC = () => {
       setBrandToDelete(null);
     }
   };
-  
-  const filteredBrands = brands.filter((brand) => 
-    brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (brand.description && brand.description.toLowerCase().includes(searchTerm.toLowerCase()))
+
+  const filteredBrands = brands.filter((brand) =>
+    brand.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    brand.content?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -66,7 +67,7 @@ const BrandsPage: React.FC = () => {
           Add Brand
         </button>
       </div>
-      
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -81,7 +82,7 @@ const BrandsPage: React.FC = () => {
           />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading ? (
           <div className="col-span-full flex justify-center py-8">
@@ -96,38 +97,39 @@ const BrandsPage: React.FC = () => {
             <div key={brand.id} className="card card-hover">
               <div className="flex h-full flex-col">
                 <div className="flex items-center gap-4">
-                  {brand.logo ? (
-                    <img 
-                      src={brand.logo} 
-                      alt={brand.name} 
-                      className="h-12 w-12 rounded-md object-cover"
-                    />
+                  {brand.icon ? (
+                    <img
+                        src={brand.icon}
+                        alt={brand.title}
+                        className="h-32 w-32 rounded-md object-cover"
+                      />
                   ) : (
                     <div className="flex h-12 w-12 items-center justify-center rounded-md bg-primary-100 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400">
-                      {brand.name.charAt(0).toUpperCase()}
+                      {brand.title?.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0">
                     <h3 className="truncate text-lg font-semibold text-gray-900 dark:text-white">
-                      {brand.name}
+                      {brand.title}
                     </h3>
-                    {brand.website && (
-                      <a 
-                        href={brand.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary-600 hover:underline dark:text-primary-400"
+                    {brand.status !== undefined && (
+                      <span
+                        className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                          brand.status
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400'
+                        }`}
                       >
-                        {brand.website.replace(/^https?:\/\//, '')}
-                      </a>
+                        {brand.status ? 'Active' : 'Inactive'}
+                      </span>
                     )}
                   </div>
                 </div>
-                
+
                 <p className="mt-3 text-sm text-gray-600 line-clamp-2 dark:text-gray-400">
-                  {brand.description || 'No description provided'}
+                  {brand.content || 'No description provided'}
                 </p>
-                
+
                 <div className="mt-auto pt-4 flex justify-end gap-2">
                   <button
                     className="rounded-md p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-600"
@@ -147,12 +149,13 @@ const BrandsPage: React.FC = () => {
           ))
         )}
       </div>
-      
-      <BrandModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
-      
+
+          <BrandModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              onBrandSaved={() => dispatch(fetchBrands())} // 👈 refetch after saving
+            />
+
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}

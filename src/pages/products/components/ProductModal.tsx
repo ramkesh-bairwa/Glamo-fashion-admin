@@ -18,7 +18,7 @@ type FormValues = {
   brandId: string;
   stock: number;
   sku: string;
-  imageUrl: string;
+  images: string;
 };
 
 const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
@@ -44,11 +44,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
       brandId: '',
       stock: 0,
       sku: '',
-      imageUrl: '',
+      images: '',
     },
   });
   
-  const imageUrl = watch('imageUrl');
+  // const imageUrl = watch('images');
   
   useEffect(() => {
     if (selectedProduct) {
@@ -65,13 +65,6 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
       setImages([]);
     }
   }, [selectedProduct, setValue, reset]);
-  
-  const handleAddImage = () => {
-    if (imageUrl && imageUrl.trim() !== '') {
-      setImages([...images, imageUrl]);
-      setValue('imageUrl', '');
-    }
-  };
   
   const handleRemoveImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
@@ -172,7 +165,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
                   )}
                 </div>
                 
-                <div>
+                {/* <div>
                   <label htmlFor="stock" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Stock <span className="text-error-500">*</span>
                   </label>
@@ -193,10 +186,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
                   {errors.stock && (
                     <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.stock.message}</p>
                   )}
-                </div>
+                </div> */}
               </div>
               
-              <div>
+              {/* <div>
                 <label htmlFor="sku" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   SKU <span className="text-error-500">*</span>
                 </label>
@@ -210,7 +203,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
                 {errors.sku && (
                   <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.sku.message}</p>
                 )}
-              </div>
+              </div> */}
             </div>
             
             <div className="space-y-4">
@@ -247,7 +240,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
                   <option value="">Select a brand</option>
                   {brands.map((brand) => (
                     <option key={brand.id} value={brand.id}>
-                      {brand.name}
+                      {brand.title}
                     </option>
                   ))}
                 </select>
@@ -262,26 +255,32 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
                 </label>
                 <div className="flex items-center gap-2">
                   <input
-                    type="text"
-                    className="input flex-1"
-                    placeholder="Image URL"
-                    {...register('imageUrl', {
-                      pattern: {
-                        value: /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
-                        message: 'Enter a valid URL',
-                      },
-                    })}
-                  />
-                  <button
+                      id="images"
+                      type="file"
+                      accept="image/*"
+                      className="input flex-1"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64String = reader.result as string;
+                          setImages((prev) => [...prev, base64String]);
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  {/* <button
                     type="button"
                     className="btn btn-primary p-2"
                     onClick={handleAddImage}
                   >
                     <Plus size={16} />
-                  </button>
+                  </button> */}
                 </div>
-                {errors.imageUrl && (
-                  <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.imageUrl.message}</p>
+                {errors.images && (
+                  <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.images.message}</p>
                 )}
                 
                 <div className="mt-3 grid grid-cols-3 gap-2">

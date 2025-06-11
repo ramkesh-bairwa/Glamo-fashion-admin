@@ -1,10 +1,10 @@
 export interface Brand {
   id: string;
-  name: string;
-  description?: string;
-  logo?: string;
-  website?: string;
-  isActive?: boolean;
+  title: string;
+  content?: string;
+  icon?: string;
+  slug?: string;
+  status?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

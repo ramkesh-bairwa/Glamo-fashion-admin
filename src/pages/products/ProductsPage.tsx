@@ -21,11 +21,11 @@ const ProductsPage: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterBrand, setFilterBrand] = useState('');
   
-  useEffect(() => {
-    dispatch(fetchProducts());
-    dispatch(fetchCategories());
-    dispatch(fetchBrands());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(fetchProducts());
+  //   dispatch(fetchCategories());
+  //   dispatch(fetchBrands());
+  // }, [dispatch]);
   
   const handleAddProduct = () => {
     dispatch(setSelectedProduct(null));
@@ -79,8 +79,15 @@ const ProductsPage: React.FC = () => {
   
   const getBrandName = (brandId: string) => {
     const brand = brands.find((b) => b.id === brandId);
-    return brand ? brand.name : 'Unknown Brand';
+    return brand ? brand.title : 'Unknown Brand';
   };
+
+ useEffect(() => {
+  if (products.length === 0) dispatch(fetchProducts());
+  if (categories.length === 0) dispatch(fetchCategories());
+  if (brands.length === 0) dispatch(fetchBrands());
+  console.log(brands)
+}, [dispatch, products.length, categories.length, brands.length]);
   
   return (
     <div className="space-y-6">
@@ -129,7 +136,7 @@ const ProductsPage: React.FC = () => {
               <option value="">All Brands</option>
               {brands.map((brand) => (
                 <option key={brand.id} value={brand.id}>
-                  {brand.name}
+                  {brand.title}
                 </option>
               ))}
             </select>

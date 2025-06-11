@@ -18,7 +18,7 @@ function App() {
   const { isAuthenticated, loading } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    dispatch(checkAuth());
+    // dispatch(checkAuth());
   }, [dispatch]);
 
   if (loading) {

@@ -10,7 +10,7 @@ import { store } from './store';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  // <StrictMode>
     <Provider store={store}>
       <BrowserRouter basename="/admin">
         <App />
@@ -28,5 +28,5 @@ createRoot(document.getElementById('root')!).render(
         />
       </BrowserRouter>
     </Provider>
-  </StrictMode>
+  // </StrictMode>
 );

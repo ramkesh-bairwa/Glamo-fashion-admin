@@ -59,12 +59,12 @@ const Sidebar: React.FC = () => {
           <BarChart3 size={sidebarOpen ? 18 : 20} className="text-primary-600 dark:text-primary-400" />
           {sidebarOpen && (
             <div className="flex-1">
-              <p className="text-xs font-medium text-primary-700 dark:text-primary-300">
+              {/* <p className="text-xs font-medium text-primary-700 dark:text-primary-300">
                 Pro Version
               </p>
               <p className="text-xs text-primary-600 dark:text-primary-400">
                 Upgrade now
-              </p>
+              </p> */}
             </div>
           )}
         </div>

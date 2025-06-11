@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { Product } from '../../types/product';
+import axiosInstance, { axiosWithToken } from '../../api/axiosInstance';
 
 // Sample initial data
 const sampleProducts: Product[] = [
@@ -86,20 +87,28 @@ export const fetchProducts = createAsyncThunk('products/fetchProducts', async ()
 });
 
 export const addProduct = createAsyncThunk(
-  'products/addProduct',
+  'products/create',
   async (product: Omit<Product, 'id'>) => {
-    // Simulate API call
-    return new Promise<Product>((resolve) => {
-      setTimeout(() => {
-        const newProduct = {
-          ...product,
-          id: Math.random().toString(36).substring(2, 9),
-        };
-        resolve(newProduct);
-      }, 500);
+    const axios = axiosWithToken();
+    const url = `${axios.defaults.baseURL}/affiliate-products/create`;
+
+    const response = await axios.post(url, {
+      title: product.name,
+      price: product.price,
+      category: product.categoryId,
+      brand: product.brandId,
+      image: "TEST", // should be base64 strings
+      shortDesc:product.description,
+      longDesc:product.description,
+      affiliateUrl:"TEST",
+      slug:"tetstst"
+
     });
+
+    return response.data;
   }
 );
+
 
 export const updateProduct = createAsyncThunk(
   'products/updateProduct',
