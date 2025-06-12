@@ -11,7 +11,7 @@ import UsersPage from './pages/users/UsersPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAppDispatch, useAppSelector } from './hooks/reduxHooks';
-import { checkAuth } from './store/auth/authSlice';
+// import { checkAuth } from './store/auth/authSlice';
 
 function App() {
   const dispatch = useAppDispatch();

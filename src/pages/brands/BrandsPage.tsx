@@ -101,7 +101,7 @@ const BrandsPage: React.FC = () => {
                     <img
                         src={brand.icon}
                         alt={brand.title}
-                        className="h-32 w-32 rounded-md object-cover"
+                        className="h-32 w-40 rounded-md object-cover"
                       />
                   ) : (
                     <div className="flex h-12 w-12 items-center justify-center rounded-md bg-primary-100 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400">

@@ -51,11 +51,10 @@ const CategoriesPage: React.FC = () => {
       setCategoryToDelete(null);
     }
   };
-  
-  const filteredCategories = categories.filter((category) => 
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+const filteredCategories = categories.filter((category) => 
+  (category.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+   category.content?.toLowerCase().includes(searchTerm.toLowerCase()))
+);
   
   return (
     <div className="space-y-6">
@@ -110,8 +109,8 @@ const CategoriesPage: React.FC = () => {
             ) : (
               filteredCategories.map((category) => (
                 <tr key={category.id} className="table-row table-row-hover">
-                  <td className="table-cell font-medium">{category.name}</td>
-                  <td className="table-cell">{category.description}</td>
+                  <td className="table-cell font-medium">{category.title}</td>
+                  <td className="table-cell">{category.content}</td>
                   <td className="table-cell">{category.slug}</td>
                   <td className="table-cell">
                     <div className="flex items-center gap-2">

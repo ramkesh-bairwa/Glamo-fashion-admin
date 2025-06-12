@@ -11,8 +11,8 @@ interface CategoryModalProps {
 }
 
 type FormValues = {
-  name: string;
-  description: string;
+  title: string;
+  content: string;
   slug: string;
 };
 
@@ -29,23 +29,23 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose }) => {
     watch,
   } = useForm<FormValues>({
     defaultValues: {
-      name: '',
-      description: '',
+      title: '',
+      content: '',
       slug: '',
     },
   });
   
   useEffect(() => {
     if (selectedCategory) {
-      setValue('name', selectedCategory.name);
-      setValue('description', selectedCategory.description);
+      setValue('title', selectedCategory.title);
+      setValue('content', selectedCategory.content);
       setValue('slug', selectedCategory.slug);
     } else {
       reset();
     }
   }, [selectedCategory, setValue, reset]);
   
-  const watchName = watch('name');
+  const watchName = watch('title');
   
   useEffect(() => {
     if (!selectedCategory && watchName) {
@@ -94,14 +94,14 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose }) => {
                 Name <span className="text-error-500">*</span>
               </label>
               <input
-                id="name"
+                id="title"
                 type="text"
                 className="input w-full"
                 placeholder="Category name"
-                {...register('name', { required: 'Name is required' })}
+                {...register('title', { required: 'Name is required' })}
               />
-              {errors.name && (
-                <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.name.message}</p>
+              {errors.title && (
+                <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.title.message}</p>
               )}
             </div>
             
@@ -110,11 +110,11 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose }) => {
                 Description
               </label>
               <textarea
-                id="description"
+                id="content"
                 rows={3}
                 className="input w-full"
                 placeholder="Category description"
-                {...register('description')}
+                {...register('content')}
               ></textarea>
             </div>
             

@@ -1,15 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { Category } from '../../types/category';
-
-// Sample initial data
-const sampleCategories: Category[] = [
-  { id: '1', name: 'Electronics', description: 'Electronic devices and gadgets', slug: 'electronics' },
-  { id: '2', name: 'Clothing', description: 'Fashion items and apparel', slug: 'clothing' },
-  { id: '3', name: 'Home & Kitchen', description: 'Home appliances and kitchenware', slug: 'home-kitchen' },
-  { id: '4', name: 'Books', description: 'Books, e-books, and audiobooks', slug: 'books' },
-  { id: '5', name: 'Toys & Games', description: 'Toys, games, and entertainment items', slug: 'toys-games' },
-];
+import { axiosWithToken } from '../../api/axiosInstance';
 
 interface CategoryState {
   categories: Category[];
@@ -19,59 +11,90 @@ interface CategoryState {
 }
 
 const initialState: CategoryState = {
-  categories: sampleCategories,
+  categories: [],
   selectedCategory: null,
   loading: false,
   error: null,
 };
 
 // In a real app, these would be API calls
-export const fetchCategories = createAsyncThunk('categories/fetchCategories', async () => {
-  // Simulate API call
-  return new Promise<Category[]>((resolve) => {
-    setTimeout(() => {
-      resolve(sampleCategories);
-    }, 500);
-  });
-});
+export const fetchCategories = createAsyncThunk(
+  'categories/fetchAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken();
+      const url = `${axios.defaults.baseURL}/categories`;
+      console.log('📦 Fetching categories from:', url);
+      const response = await axios.get(url);
+
+      if (Array.isArray(response.data.data)) {
+        return response.data.data;
+      } else if (Array.isArray(response.data.data?.data)) {
+        return response.data.data.data;
+      } else {
+        return rejectWithValue('Invalid categories format');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch categories');
+    }
+  }
+);
 
 export const addCategory = createAsyncThunk(
   'categories/addCategory',
-  async (category: Omit<Category, 'id'>) => {
-    // Simulate API call
-    return new Promise<Category>((resolve) => {
-      setTimeout(() => {
-        const newCategory = {
-          ...category,
-          id: Math.random().toString(36).substring(2, 9),
-        };
-        resolve(newCategory);
-      }, 500);
-    });
+  async (category: Omit<Category, 'id'>, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken(); // your axios instance
+      const url = `${axios.defaults.baseURL}/categories/create`; // assuming baseURL is already set to /api/admin
+      const response = await axios.post(url, category);
+
+      if (response.data.status) {
+        return response.data.data; // adjust based on actual response structure
+      } else {
+        return rejectWithValue(response.data.message || 'Failed to add category');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'API error');
+    }
   }
 );
 
 export const updateCategory = createAsyncThunk(
   'categories/updateCategory',
-  async (category: Category) => {
-    // Simulate API call
-    return new Promise<Category>((resolve) => {
-      setTimeout(() => {
-        resolve(category);
-      }, 500);
-    });
+  async (category: Category, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken();
+      const { id, title, content, slug } = category; // Only send editable fields
+      const url = `${axios.defaults.baseURL}/categories/edit/${id}`;
+      const response = await axios.patch(url, { title, content, slug });
+
+      if (response.data.status) {
+        return response.data.data; // return updated category
+      } else {
+        return rejectWithValue(response.data.message || 'Failed to update category');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'API error');
+    }
   }
 );
 
 export const deleteCategory = createAsyncThunk(
   'categories/deleteCategory',
-  async (id: string) => {
-    // Simulate API call
-    return new Promise<string>((resolve) => {
-      setTimeout(() => {
-        resolve(id);
-      }, 500);
-    });
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken();
+      const url = `${axios.defaults.baseURL}/categories/delete/${id}`;
+      const response = await axios.delete(url);
+
+      if (response.data.status) {
+        return id;
+      } else {
+        return rejectWithValue(response.data.message || 'Failed to delete category');
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'API error');
+    }
   }
 );
 

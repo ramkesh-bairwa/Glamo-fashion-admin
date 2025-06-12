@@ -1,13 +1,13 @@
 export interface Product {
   id: string;
-  name: string;
-  description: string;
+  title: string;
+  shortDesc: string;
   price: number;
-  categoryId: string;
-  brandId: string;
-  images: string[];
-  stock: number;
-  sku: string;
+  category: string;
+  brand: string;
+  image: string; // changed from images to image
+  slug: string;
+  affiliateUrl: string;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;

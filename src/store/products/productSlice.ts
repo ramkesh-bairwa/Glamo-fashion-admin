@@ -3,65 +3,6 @@ import { toast } from 'react-toastify';
 import { Product } from '../../types/product';
 import axiosInstance, { axiosWithToken } from '../../api/axiosInstance';
 
-// Sample initial data
-const sampleProducts: Product[] = [
-  {
-    id: '1',
-    name: 'iPhone 13 Pro',
-    description: 'The latest iPhone with advanced features.',
-    price: 999,
-    categoryId: '1',
-    brandId: '1',
-    images: ['https://images.pexels.com/photos/5750001/pexels-photo-5750001.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-    stock: 50,
-    sku: 'IP13P-128-GR',
-  },
-  {
-    id: '2',
-    name: 'Samsung Galaxy S22',
-    description: 'Flagship Android smartphone with premium features.',
-    price: 799,
-    categoryId: '1',
-    brandId: '2',
-    images: ['https://images.pexels.com/photos/404280/pexels-photo-404280.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-    stock: 35,
-    sku: 'SGS22-128-BK',
-  },
-  {
-    id: '3',
-    name: 'MacBook Pro M2',
-    description: 'Powerful laptop for professionals with Apple Silicon.',
-    price: 1299,
-    categoryId: '1',
-    brandId: '1',
-    images: ['https://images.pexels.com/photos/812264/pexels-photo-812264.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-    stock: 20,
-    sku: 'MBP-M2-512-SG',
-  },
-  {
-    id: '4',
-    name: 'Sony WH-1000XM4',
-    description: 'Premium noise-cancelling headphones with exceptional sound quality.',
-    price: 349,
-    categoryId: '1',
-    brandId: '4',
-    images: ['https://images.pexels.com/photos/3394650/pexels-photo-3394650.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-    stock: 45,
-    sku: 'SWXM4-BK',
-  },
-  {
-    id: '5',
-    name: 'Nike Air Max 270',
-    description: 'Stylish and comfortable athletic shoes.',
-    price: 150,
-    categoryId: '2',
-    brandId: '3',
-    images: ['https://images.pexels.com/photos/1598508/pexels-photo-1598508.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'],
-    stock: 60,
-    sku: 'NAM270-10-BW',
-  },
-];
-
 interface ProductState {
   products: Product[];
   selectedProduct: Product | null;
@@ -70,70 +11,107 @@ interface ProductState {
 }
 
 const initialState: ProductState = {
-  products: sampleProducts,
+  products: [],
   selectedProduct: null,
   loading: false,
   error: null,
 };
 
-// In a real app, these would be API calls
-export const fetchProducts = createAsyncThunk('products/fetchProducts', async () => {
-  // Simulate API call
-  return new Promise<Product[]>((resolve) => {
-    setTimeout(() => {
-      resolve(sampleProducts);
-    }, 500);
-  });
-});
+export const fetchProducts = createAsyncThunk(
+  'products/fetchAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken();
+      const url = `${axios.defaults.baseURL}/affiliate-products`;
+      console.log('📦 Fetching products from:', url);
 
-export const addProduct = createAsyncThunk(
-  'products/create',
-  async (product: Omit<Product, 'id'>) => {
-    const axios = axiosWithToken();
-    const url = `${axios.defaults.baseURL}/affiliate-products/create`;
+      const response = await axios.get(url);
 
-    const response = await axios.post(url, {
-      title: product.name,
-      price: product.price,
-      category: product.categoryId,
-      brand: product.brandId,
-      image: "TEST", // should be base64 strings
-      shortDesc:product.description,
-      longDesc:product.description,
-      affiliateUrl:"TEST",
-      slug:"tetstst"
+      const items = response?.data?.data?.items;
 
-    });
+      if (Array.isArray(items)) {
+        return items;
+      }
 
-    return response.data;
+      console.error('❌ Unexpected response format:', response.data);
+      return rejectWithValue('Invalid products format');
+    } catch (error: any) {
+      console.error('❌ API Error:', error);
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch products');
+    }
   }
 );
 
+
+// Add product
+export const addProduct = createAsyncThunk(
+  'products/create',
+  async (product: Omit<Product, 'id'>, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken();
+      const url = `${axios.defaults.baseURL}/affiliate-products/create`;
+
+      const response = await axios.post(url, {
+        title: product.title,
+        price: product.price,
+        category: product.category,
+        brand: product.brand,
+        image: product.image, // should be base64 or URL
+        shortDesc: product.shortDesc,
+        longDesc: product.shortDesc || product.shortDesc,
+        affiliateUrl: product.affiliateUrl,
+        slug: product.slug,
+      });
+
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to add product');
+    }
+  }
+);
 
 export const updateProduct = createAsyncThunk(
   'products/updateProduct',
-  async (product: Product) => {
-    // Simulate API call
-    return new Promise<Product>((resolve) => {
-      setTimeout(() => {
-        resolve(product);
-      }, 500);
-    });
+  async (product: Product, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken();
+      const url = `/affiliate-products/edit/${product.id}`; // ✅ Correct API path
+
+      const response = await axios.patch(url, {
+        title: product.title,
+        price: product.price,
+        category: product.category,
+        brand: product.brand,
+        image: product.image,
+        shortDesc: product.shortDesc,
+        longDesc: product.shortDesc || product.shortDesc,
+        affiliateUrl: product.affiliateUrl,
+        slug: product.slug,
+      });
+
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update product');
+    }
   }
 );
+
 
 export const deleteProduct = createAsyncThunk(
   'products/deleteProduct',
-  async (id: string) => {
-    // Simulate API call
-    return new Promise<string>((resolve) => {
-      setTimeout(() => {
-        resolve(id);
-      }, 500);
-    });
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const axios = axiosWithToken();
+      const url = `/affiliate-products/delete/${id}`; // ✅ Updated path
+      await axios.delete(url);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete product');
+    }
   }
 );
 
+// Slice
 const productSlice = createSlice({
   name: 'products',
   initialState,
@@ -147,6 +125,7 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Fetch
       .addCase(fetchProducts.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -157,8 +136,11 @@ const productSlice = createSlice({
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch products';
+        state.error = action.payload as string;
+        toast.error(state.error);
       })
+
+      // Add
       .addCase(addProduct.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -170,9 +152,11 @@ const productSlice = createSlice({
       })
       .addCase(addProduct.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to add product';
+        state.error = action.payload as string;
         toast.error(state.error);
       })
+
+      // Update
       .addCase(updateProduct.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -188,9 +172,11 @@ const productSlice = createSlice({
       })
       .addCase(updateProduct.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to update product';
+        state.error = action.payload as string;
         toast.error(state.error);
       })
+
+      // Delete
       .addCase(deleteProduct.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -202,7 +188,7 @@ const productSlice = createSlice({
       })
       .addCase(deleteProduct.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to delete product';
+        state.error = action.payload as string;
         toast.error(state.error);
       });
   },

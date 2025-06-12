@@ -11,23 +11,27 @@ interface ProductModalProps {
 }
 
 type FormValues = {
-  name: string;
-  description: string;
+  title: string;
+  shortDesc: string;
   price: number;
   categoryId: string;
   brandId: string;
-  stock: number;
-  sku: string;
-  images: string;
+  slug: string;
+  affiliateUrl: string;
+  image: string; // single image
 };
+
+const slugify = (text: string) =>
+  text.toLowerCase().trim().replace(/[\s\W-]+/g, '-').replace(/^-+|-+$/g, '');
 
 const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
   const dispatch = useAppDispatch();
   const { selectedProduct, loading } = useAppSelector((state) => state.products);
   const { categories } = useAppSelector((state) => state.categories);
   const { brands } = useAppSelector((state) => state.brands);
-  const [images, setImages] = useState<string[]>([]);
-  
+
+  const [image, setImage] = useState<string>(''); // single image base64
+
   const {
     register,
     handleSubmit,
@@ -37,51 +41,65 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
     watch,
   } = useForm<FormValues>({
     defaultValues: {
-      name: '',
-      description: '',
+      title: '',
+      shortDesc: '',
       price: 0,
       categoryId: '',
       brandId: '',
-      stock: 0,
-      sku: '',
-      images: '',
+      slug: '',
+      affiliateUrl: '',
+      image: '',
     },
   });
-  
-  // const imageUrl = watch('images');
-  
+
+  const nameValue = watch('title');
+
   useEffect(() => {
     if (selectedProduct) {
-      setValue('name', selectedProduct.name);
-      setValue('description', selectedProduct.description);
-      setValue('price', selectedProduct.price);
-      setValue('categoryId', selectedProduct.categoryId);
-      setValue('brandId', selectedProduct.brandId);
-      setValue('stock', selectedProduct.stock);
-      setValue('sku', selectedProduct.sku);
-      setImages(selectedProduct.images || []);
+      reset({
+        title: selectedProduct.title,
+        shortDesc: selectedProduct.shortDesc,
+        price: selectedProduct.price,
+        categoryId: selectedProduct.category,
+        brandId: selectedProduct.brand,
+        slug: selectedProduct.slug,
+        affiliateUrl: selectedProduct.affiliateUrl || '',
+        image: selectedProduct.image || '',
+      });
+      setImage(selectedProduct.image || '');
     } else {
       reset();
-      setImages([]);
+      setImage('');
     }
-  }, [selectedProduct, setValue, reset]);
-  
-  const handleRemoveImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
+  }, [selectedProduct, reset]);
+
+  useEffect(() => {
+    const newSlug = slugify(nameValue);
+    setValue('slug', newSlug, { shouldValidate: true });
+  }, [nameValue, setValue]);
+
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setImage(base64);
+      setValue('image', base64, { shouldValidate: true });
+    };
+    reader.readAsDataURL(file);
   };
-  
+
   const onSubmit = (data: FormValues) => {
     const productData = {
-      name: data.name,
-      description: data.description,
+      title: data.title,
+      shortDesc: data.shortDesc,
       price: data.price,
-      categoryId: data.categoryId,
-      brandId: data.brandId,
-      stock: data.stock,
-      sku: data.sku,
-      images,
+      category: data.categoryId,
+      brand: data.brandId,
+      slug: data.slug,
+      affiliateUrl: data.affiliateUrl,
+      image, // single base64 image
     };
-    
+
     if (selectedProduct) {
       dispatch(updateProduct({ ...selectedProduct, ...productData }));
     } else {
@@ -89,9 +107,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
     }
     onClose();
   };
-  
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
       <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-dark-700 animate-fade-in animate-slide-in my-8">
@@ -107,227 +125,146 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose }) => {
             <X size={18} />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="p-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-4">
               <div>
-                <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Name <span className="text-error-500">*</span>
-                </label>
+                <label className="label">Title *</label>
                 <input
-                  id="name"
-                  type="text"
                   className="input w-full"
-                  placeholder="Product name"
-                  {...register('name', { required: 'Name is required' })}
+                  placeholder="Product title"
+                  {...register('title', { required: 'Title is required' })}
                 />
-                {errors.name && (
-                  <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.name.message}</p>
-                )}
+                {errors.title && <p className="text-error">{errors.title.message}</p>}
               </div>
-              
+
               <div>
-                <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Description
-                </label>
+                <label className="label">Description</label>
                 <textarea
-                  id="description"
-                  rows={3}
                   className="input w-full"
+                  rows={3}
                   placeholder="Product description"
-                  {...register('description')}
+                  {...register('shortDesc')}
                 ></textarea>
               </div>
-              
+
+              <div>
+                <label className="label">Affiliate URL *</label>
+                <input
+                  id="affiliateUrl"
+                  className="input w-full"
+                  placeholder="https://..."
+                  {...register('affiliateUrl', {
+                    required: 'Affiliate URL is required',
+                    pattern: {
+                      value: /^(https?:\/\/)[\w\-]+(\.[\w\-]+)+[/#?]?.*$/,
+                      message: 'Enter a valid URL',
+                    },
+                  })}
+                />
+                {errors.affiliateUrl && <p className="text-error">{errors.affiliateUrl.message}</p>}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="price" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Price <span className="text-error-500">*</span>
-                  </label>
+                  <label className="label">Price *</label>
                   <input
-                    id="price"
                     type="number"
-                    step="0.01"
-                    min="0"
                     className="input w-full"
-                    placeholder="0.00"
-                    {...register('price', { 
+                    {...register('price', {
                       required: 'Price is required',
-                      min: {
-                        value: 0,
-                        message: 'Price cannot be negative',
-                      },
+                      min: { value: 0, message: 'Price must be positive' },
                     })}
                   />
-                  {errors.price && (
-                    <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.price.message}</p>
-                  )}
+                  {errors.price && <p className="text-error">{errors.price.message}</p>}
                 </div>
-                
-                {/* <div>
-                  <label htmlFor="stock" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Stock <span className="text-error-500">*</span>
-                  </label>
+
+                <div>
+                  <label className="label">Slug *</label>
                   <input
-                    id="stock"
-                    type="number"
-                    min="0"
+                    readOnly
                     className="input w-full"
-                    placeholder="0"
-                    {...register('stock', { 
-                      required: 'Stock is required',
-                      min: {
-                        value: 0,
-                        message: 'Stock cannot be negative',
-                      },
-                    })}
+                    {...register('slug', { required: 'Slug is required' })}
                   />
-                  {errors.stock && (
-                    <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.stock.message}</p>
-                  )}
-                </div> */}
+                </div>
               </div>
-              
-              {/* <div>
-                <label htmlFor="sku" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  SKU <span className="text-error-500">*</span>
-                </label>
-                <input
-                  id="sku"
-                  type="text"
-                  className="input w-full"
-                  placeholder="Product SKU"
-                  {...register('sku', { required: 'SKU is required' })}
-                />
-                {errors.sku && (
-                  <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.sku.message}</p>
-                )}
-              </div> */}
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label htmlFor="categoryId" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Category <span className="text-error-500">*</span>
-                </label>
+                <label className="label">Category *</label>
                 <select
-                  id="categoryId"
                   className="select w-full"
                   {...register('categoryId', { required: 'Category is required' })}
                 >
-                  <option value="">Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.title}
                     </option>
                   ))}
                 </select>
-                {errors.categoryId && (
-                  <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.categoryId.message}</p>
-                )}
+                {errors.categoryId && <p className="text-error">{errors.categoryId.message}</p>}
               </div>
-              
+
               <div>
-                <label htmlFor="brandId" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Brand <span className="text-error-500">*</span>
-                </label>
+                <label className="label">Brand *</label>
                 <select
-                  id="brandId"
                   className="select w-full"
                   {...register('brandId', { required: 'Brand is required' })}
                 >
-                  <option value="">Select a brand</option>
+                  <option value="">Select brand</option>
                   {brands.map((brand) => (
                     <option key={brand.id} value={brand.id}>
                       {brand.title}
                     </option>
                   ))}
                 </select>
-                {errors.brandId && (
-                  <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.brandId.message}</p>
-                )}
+                {errors.brandId && <p className="text-error">{errors.brandId.message}</p>}
               </div>
-              
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Images
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                      id="images"
-                      type="file"
-                      accept="image/*"
-                      className="input flex-1"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
 
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          const base64String = reader.result as string;
-                          setImages((prev) => [...prev, base64String]);
-                        };
-                        reader.readAsDataURL(file);
+              <div>
+                <label className="label">Image (Base64)</label>
+                <input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file);
+                  }}
+                  className="input w-full"
+                />
+                {errors.image && <p className="text-error">{errors.image.message}</p>}
+
+                {image && (
+                  <div className="relative mt-2 group w-28 h-20">
+                    <img src={image} className="h-full w-full object-cover rounded-md" />
+                    <button
+                      type="button"
+                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100"
+                      onClick={() => {
+                        setImage('');
+                        setValue('image', '', { shouldValidate: true });
                       }}
-                    />
-                  {/* <button
-                    type="button"
-                    className="btn btn-primary p-2"
-                    onClick={handleAddImage}
-                  >
-                    <Plus size={16} />
-                  </button> */}
-                </div>
-                {errors.images && (
-                  <p className="mt-1 text-xs text-error-600 dark:text-error-400">{errors.images.message}</p>
-                )}
-                
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative rounded-md overflow-hidden group">
-                      <img
-                        src={image}
-                        alt={`Product ${index + 1}`}
-                        className="h-20 w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleRemoveImage(index)}
-                      >
-                        <Trash size={16} className="text-white" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                
-                {images.length === 0 && (
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    No images added yet. Add at least one image for your product.
-                  </p>
+                    >
+                      <Trash size={16} className="text-white" />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           </div>
-          
+
           <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-outline"
-              disabled={loading}
-            >
+            <button type="button" onClick={onClose} className="btn btn-outline" disabled={loading}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-            >
+            <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  <div className="loader" />
                   <span>Saving...</span>
                 </div>
               ) : (

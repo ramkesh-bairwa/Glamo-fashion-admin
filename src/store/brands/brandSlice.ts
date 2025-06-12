@@ -1,8 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { Brand } from '../../types/brand';
-import axiosInstance, { axiosWithToken } from '../../api/axiosInstance';
-
+import { axiosWithToken } from '../../api/axiosInstance';
 
 interface BrandState {
   brands: Brand[];

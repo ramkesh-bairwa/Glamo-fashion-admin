@@ -1,7 +1,7 @@
 export interface Category {
   id: string;
-  name: string;
-  description: string;
+  title: string;
+  content: string;
   slug: string;
   imageUrl?: string;
   parentId?: string;
