@@ -27,7 +27,7 @@ export const fetchProducts = createAsyncThunk(
 
       const response = await axios.get(url);
 
-      const items = response?.data?.data?.items;
+      const items = response?.data?.data; // <-- FIXED
 
       if (Array.isArray(items)) {
         return items;
