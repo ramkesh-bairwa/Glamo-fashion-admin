@@ -179,7 +179,7 @@ const ProductsPage: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  <td className="table-cell font-medium">{product.title}</td>
+                  <td className="table-cell font-medium">{product.title.split(' ').slice(0, 5).join(' ')}</td>
                   <td className="table-cell">{getCategoryName(product.category)}</td>
                   <td className="table-cell">{getBrandName(product.brand)}</td>
                   <td className="table-cell">₹ {product.price}</td>
