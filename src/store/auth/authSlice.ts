@@ -9,7 +9,6 @@ interface AuthState {
   error: string | null;
 }
 
-// ✅ Safe parsing of localStorage JSON value
 const safeParse = (value: string | null) => {
   try {
     if (!value || value === 'undefined') return null;
@@ -28,7 +27,6 @@ const initialState: AuthState = {
   error: null,
 };
 
-// ✅ Login action
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
@@ -36,6 +34,7 @@ export const login = createAsyncThunk(
       const response = await axiosInstance.post('/admin-auth/login', credentials);
       if (response.data.status) {
         const { access_token, admin_info } = response.data.data;
+        console.log(access_token, admin_info)
         localStorage.setItem('adminToken', access_token);
         localStorage.setItem('adminInfo', JSON.stringify(admin_info));
         return admin_info;
