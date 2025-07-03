@@ -34,7 +34,6 @@ export const login = createAsyncThunk(
       const response = await axiosInstance.post('/admin-auth/login', credentials);
       if (response.data.status) {
         const { access_token, admin_info } = response.data.data;
-        console.log(access_token, admin_info)
         localStorage.setItem('adminToken', access_token);
         localStorage.setItem('adminInfo', JSON.stringify(admin_info));
         return admin_info;
@@ -50,20 +49,21 @@ export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
   async (_, { rejectWithValue }) => {
     try {
-      const axios = axiosWithToken(); // ✅ CALL the function
+      const axios = axiosWithToken();
       const response = await axios.get('/admin-auth/check-token');
-      if(response.data.status==false){
+      
+      if (response.data.status === false) {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminInfo');
-        window.location.href = '/admin/login'; // Redirect to login
-        return rejectWithValue('Unauthorized'); 
+        window.location.href = '/admin/login';
+        return rejectWithValue('Unauthorized');
       }
-      // const user = response.data.user;
-      // localStorage.setItem('adminInfo', JSON.stringify(user));
-      
-      // return user;
+
+      const user = response.data.user || response.data.data || null;
+      localStorage.setItem('adminInfo', JSON.stringify(user));
+      return user; // ✅ Must return so .fulfilled gets a payload
+
     } catch (error: any) {
-     
       localStorage.removeItem('adminToken');
       localStorage.removeItem('adminInfo');
       return rejectWithValue('Unauthorized');
