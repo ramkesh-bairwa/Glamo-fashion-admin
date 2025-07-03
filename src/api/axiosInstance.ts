@@ -12,7 +12,7 @@ const axiosInstance = axios.create({
 
 export const axiosWithToken = () => {
   const token = localStorage.getItem('adminToken');
-  
+  console.log(token)
   return axios.create({
     baseURL,
     headers: {
