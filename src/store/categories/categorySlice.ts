@@ -17,7 +17,6 @@ const initialState: CategoryState = {
   error: null,
 };
 
-// In a real app, these would be API calls
 export const fetchCategories = createAsyncThunk(
   'categories/fetchAll',
   async (_, { rejectWithValue }) => {
@@ -44,12 +43,12 @@ export const addCategory = createAsyncThunk(
   'categories/addCategory',
   async (category: Omit<Category, 'id'>, { rejectWithValue }) => {
     try {
-      const axios = axiosWithToken(); // your axios instance
-      const url = `${axios.defaults.baseURL}/categories/create`; // assuming baseURL is already set to /api/admin
-      const response = await axios.post(url, category);
+      const axios = axiosWithToken();
+      const url = `${axios.defaults.baseURL}/categories/create`;
+      const response = await axios.post(url, category); // ✅ category includes icon (Base64)
 
       if (response.data.status) {
-        return response.data.data; // adjust based on actual response structure
+        return response.data.data;
       } else {
         return rejectWithValue(response.data.message || 'Failed to add category');
       }
@@ -64,12 +63,12 @@ export const updateCategory = createAsyncThunk(
   async (category: Category, { rejectWithValue }) => {
     try {
       const axios = axiosWithToken();
-      const { id, title, content, slug } = category; // Only send editable fields
+      const { id, title, content, slug, icon } = category;
       const url = `${axios.defaults.baseURL}/categories/edit/${id}`;
-      const response = await axios.patch(url, { title, content, slug });
+      const response = await axios.patch(url, { title, content, slug, icon }); // ✅ include icon
 
       if (response.data.status) {
-        return response.data.data; // return updated category
+        return response.data.data;
       } else {
         return rejectWithValue(response.data.message || 'Failed to update category');
       }
@@ -111,6 +110,7 @@ const categorySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Fetch
       .addCase(fetchCategories.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -123,6 +123,8 @@ const categorySlice = createSlice({
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch categories';
       })
+
+      // Add
       .addCase(addCategory.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -137,6 +139,8 @@ const categorySlice = createSlice({
         state.error = action.error.message || 'Failed to add category';
         toast.error(state.error);
       })
+
+      // Update
       .addCase(updateCategory.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -155,6 +159,8 @@ const categorySlice = createSlice({
         state.error = action.error.message || 'Failed to update category';
         toast.error(state.error);
       })
+
+      // Delete
       .addCase(deleteCategory.pending, (state) => {
         state.loading = true;
         state.error = null;

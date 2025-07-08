@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Edit, Plus, Search, Trash } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks';
-import { fetchCategories, setSelectedCategory, deleteCategory } from '../../store/categories/categorySlice';
+import {
+  fetchCategories,
+  setSelectedCategory,
+  deleteCategory,
+} from '../../store/categories/categorySlice';
 import CategoryModal from './components/CategoryModal';
 import DeleteConfirmationModal from '../../components/common/DeleteConfirmationModal';
 import { Category } from '../../types/category';
@@ -9,41 +13,41 @@ import { Category } from '../../types/category';
 const CategoriesPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { categories, loading } = useAppSelector((state) => state.categories);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   useEffect(() => {
     dispatch(fetchCategories());
   }, [dispatch]);
-  
+
   const handleAddCategory = () => {
     dispatch(setSelectedCategory(null));
     setIsModalOpen(true);
   };
-  
+
   const handleEditCategory = (category: Category) => {
     dispatch(setSelectedCategory(category));
     setIsModalOpen(true);
   };
-  
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     dispatch(setSelectedCategory(null));
   };
-  
+
   const handleOpenDeleteModal = (id: string) => {
     setCategoryToDelete(id);
     setIsDeleteModalOpen(true);
   };
-  
+
   const handleCloseDeleteModal = () => {
     setIsDeleteModalOpen(false);
     setCategoryToDelete(null);
   };
-  
+
   const handleDeleteCategory = () => {
     if (categoryToDelete) {
       dispatch(deleteCategory(categoryToDelete));
@@ -51,11 +55,16 @@ const CategoriesPage: React.FC = () => {
       setCategoryToDelete(null);
     }
   };
-const filteredCategories = categories.filter((category) => 
-  (category.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-   category.content?.toLowerCase().includes(searchTerm.toLowerCase()))
-);
-  
+
+  const handleCategorySaved = () => {
+    dispatch(fetchCategories()); // ✅ refresh list after add/edit
+  };
+
+  const filteredCategories = categories.filter((category) =>
+    category.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.content?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -65,7 +74,7 @@ const filteredCategories = categories.filter((category) =>
           Add Category
         </button>
       </div>
-      
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -80,66 +89,83 @@ const filteredCategories = categories.filter((category) =>
           />
         </div>
       </div>
-      
+
       <div className="table-container">
         <table className="table">
           <thead className="table-header">
-            <tr>
-              <th className="table-cell">Name</th>
-              <th className="table-cell">Description</th>
-              <th className="table-cell">Slug</th>
-              <th className="table-cell">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="table-cell text-center py-8">
-                  <div className="flex justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
-                  </div>
-                </td>
-              </tr>
-            ) : filteredCategories.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="table-cell text-center py-8 text-gray-500 dark:text-gray-400">
-                  No categories found
-                </td>
-              </tr>
-            ) : (
-              filteredCategories.map((category) => (
-                <tr key={category.id} className="table-row table-row-hover">
-                  <td className="table-cell font-medium">{category.title}</td>
-                  <td className="table-cell">{category.content}</td>
-                  <td className="table-cell">{category.slug}</td>
-                  <td className="table-cell">
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="rounded-md p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-600"
-                        onClick={() => handleEditCategory(category)}
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        className="rounded-md p-1 text-error-500 hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
-                        onClick={() => handleOpenDeleteModal(category.id)}
-                      >
-                        <Trash size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
+  <tr>
+    <th className="table-cell">Image</th>
+    <th className="table-cell">Name</th>
+    <th className="table-cell">Description</th>
+    <th className="table-cell">Slug</th>
+    <th className="table-cell">Actions</th>
+  </tr>
+</thead>
+<tbody>
+  {loading ? (
+    <tr>
+      <td colSpan={5} className="table-cell text-center py-8">
+        <div className="flex justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
+        </div>
+      </td>
+    </tr>
+  ) : filteredCategories.length === 0 ? (
+    <tr>
+      <td colSpan={5} className="table-cell text-center py-8 text-gray-500 dark:text-gray-400">
+        No categories found
+      </td>
+    </tr>
+  ) : (
+    filteredCategories.map((category) => (
+      <tr key={category.id} className="table-row table-row-hover">
+        <td className="table-cell">
+          {category.icon ? (
+            <img
+              src={category.icon}
+              alt={category.title}
+              className="h-10 w-10 rounded object-cover border"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500">
+              N/A
+            </div>
+          )}
+        </td>
+        <td className="table-cell font-medium">{category.title}</td>
+        <td className="table-cell">{category.content}</td>
+        <td className="table-cell">{category.slug}</td>
+        <td className="table-cell">
+          <div className="flex items-center gap-2">
+            <button
+              className="rounded-md p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-600"
+              onClick={() => handleEditCategory(category)}
+            >
+              <Edit size={16} />
+            </button>
+            <button
+              className="rounded-md p-1 text-error-500 hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
+              onClick={() => handleOpenDeleteModal(category.id)}
+            >
+              <Trash size={16} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
+
         </table>
       </div>
-      
+
+      {/* ✅ Pass onCategorySaved to modal */}
       <CategoryModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onCategorySaved={handleCategorySaved}
       />
-      
+
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
