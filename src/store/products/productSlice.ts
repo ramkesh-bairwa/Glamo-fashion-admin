@@ -4,10 +4,15 @@ import { Product } from '../../types/product';
 import axiosInstance, { axiosWithToken } from '../../api/axiosInstance';
 
 interface ProductState {
-  products: Product[];
-  selectedProduct: Product | null;
+  products: Product[];  // Make sure this is always an array
   loading: boolean;
   error: string | null;
+  pagination: {
+    currentPage: number;
+    perPage: number;
+    totalItems: number;
+    totalPages: number;
+  };
 }
 
 const initialState: ProductState = {
@@ -15,33 +20,48 @@ const initialState: ProductState = {
   selectedProduct: null,
   loading: false,
   error: null,
+  pagination: {
+    currentPage: 1,
+    perPage: 10,
+    totalItems: 0,
+    totalPages: 1
+  }
 };
 
 export const fetchProducts = createAsyncThunk(
   'products/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async (params: { page?: number; limit?: number; search?: string; category?: string; brand?: string }, { rejectWithValue }) => {
     try {
       const axios = axiosWithToken();
-      const url = `${axios.defaults.baseURL}/affiliate-products`;
+      const { page = 1, limit = 10, search, category, brand } = params;
+      
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', limit.toString());
+      if (search) queryParams.append('search', search);
+      if (category) queryParams.append('category', category);
+      if (brand) queryParams.append('brand', brand);
+
+      const url = `${axios.defaults.baseURL}/affiliate-products?${queryParams.toString()}`;
       console.log('📦 Fetching products from:', url);
 
       const response = await axios.get(url);
 
-      const items = response?.data?.data; // <-- FIXED
-
-      if (Array.isArray(items)) {
-        return items;
-      }
-
-      console.error('❌ Unexpected response format:', response.data);
-      return rejectWithValue('Invalid products format');
+      return {
+        items: Array.isArray(response?.data?.data) ? response.data.data : [],
+        pagination: response?.data?.pagination || {
+          currentPage: page,
+          perPage: limit,
+          totalItems: 0,
+          totalPages: 1
+        }
+      };
     } catch (error: any) {
       console.error('❌ API Error:', error);
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch products');
     }
   }
 );
-
 
 // Add product
 export const addProduct = createAsyncThunk(
@@ -132,7 +152,8 @@ const productSlice = createSlice({
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = action.payload;
+        state.products = action.payload.items;
+        state.pagination = action.payload.pagination;
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
@@ -147,7 +168,9 @@ const productSlice = createSlice({
       })
       .addCase(addProduct.fulfilled, (state, action) => {
         state.loading = false;
-        state.products.push(action.payload);
+        state.products.unshift(action.payload); // Add new product at beginning
+        state.pagination.totalItems += 1;
+        state.pagination.totalPages = Math.ceil(state.pagination.totalItems / state.pagination.perPage);
         toast.success('Product added successfully');
       })
       .addCase(addProduct.rejected, (state, action) => {
@@ -184,6 +207,8 @@ const productSlice = createSlice({
       .addCase(deleteProduct.fulfilled, (state, action) => {
         state.loading = false;
         state.products = state.products.filter((product) => product.id !== action.payload);
+        state.pagination.totalItems -= 1;
+        state.pagination.totalPages = Math.ceil(state.pagination.totalItems / state.pagination.perPage);
         toast.success('Product deleted successfully');
       })
       .addCase(deleteProduct.rejected, (state, action) => {

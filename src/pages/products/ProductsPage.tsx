@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Edit, Plus, Search, Trash } from 'lucide-react';
+import { Edit, Plus, Search, Trash, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks';
 import {
   fetchProducts,
@@ -14,7 +14,12 @@ import { Product } from '../../types/product';
 
 const ProductsPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { products, loading } = useAppSelector((state) => state.products);
+  const { 
+    products, 
+    loading, 
+    pagination,
+    error
+  } = useAppSelector((state) => state.products);
   const { categories } = useAppSelector((state) => state.categories);
   const { brands } = useAppSelector((state) => state.brands);
 
@@ -25,11 +30,32 @@ const ProductsPage: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterBrand, setFilterBrand] = useState('');
 
+  // Fetch data with current filters
+  const fetchData = (page = 1) => {
+    dispatch(fetchProducts({
+      page,
+      limit: 10,
+      search: searchTerm,
+      category: filterCategory,
+      brand: filterBrand
+    }));
+  };
+
+  // Initial load
   useEffect(() => {
-    dispatch(fetchProducts());
+    fetchData();
     dispatch(fetchCategories());
     dispatch(fetchBrands());
   }, [dispatch]);
+
+  // Handle filter changes with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData(1); // Reset to page 1 when filters change
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, filterCategory, filterBrand]);
 
   const handleAddProduct = () => {
     dispatch(setSelectedProduct(null));
@@ -58,20 +84,22 @@ const ProductsPage: React.FC = () => {
 
   const handleDeleteProduct = () => {
     if (productToDelete) {
-      dispatch(deleteProduct(productToDelete));
+      dispatch(deleteProduct(productToDelete)).then(() => {
+        // Only refetch if we're not on the first page and the last item was deleted
+        if (products.length === 1 && pagination.currentPage > 1) {
+          fetchData(pagination.currentPage - 1);
+        } else {
+          fetchData(pagination.currentPage);
+        }
+      });
       setIsDeleteModalOpen(false);
       setProductToDelete(null);
     }
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.shortDesc?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory ? product.category === filterCategory : true;
-    const matchesBrand = filterBrand ? product.brand === filterBrand : true;
-    return matchesSearch && matchesCategory && matchesBrand;
-  });
+  const handlePageChange = (page: number) => {
+    fetchData(page);
+  };
 
   const getCategoryName = (categoryId: string) => {
     return categories.find((cat) => cat.id === categoryId)?.title || 'Unknown Category';
@@ -134,43 +162,52 @@ const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="table">
-          <thead className="table-header">
+      {error && (
+        <div className="rounded-md bg-error-50 p-4 text-error-600 dark:bg-error-900/20 dark:text-error-400">
+          {error}
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full table-auto">
+          <thead className="bg-gray-50 text-left text-sm font-medium text-gray-700 dark:bg-dark-700 dark:text-gray-300">
             <tr>
-              <th className="table-cell">Image</th>
-              <th className="table-cell">Name</th>
-              <th className="table-cell">Category</th>
-              <th className="table-cell">Brand</th>
-              <th className="table-cell">Price</th>
-              <th className="table-cell">Actions</th>
+              <th className="px-6 py-3">Image</th>
+              <th className="px-6 py-3">Name</th>
+              <th className="px-6 py-3">Category</th>
+              <th className="px-6 py-3">Brand</th>
+              <th className="px-6 py-3">Price</th>
+              <th className="px-6 py-3">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200 dark:divide-dark-600">
             {loading ? (
               <tr>
-                <td colSpan={6} className="table-cell text-center py-8">
+                <td colSpan={6} className="px-6 py-4 text-center">
                   <div className="flex justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"></div>
                   </div>
                 </td>
               </tr>
-            ) : filteredProducts.length === 0 ? (
+            ) : !Array.isArray(products) || products.length === 0 ? (
               <tr>
-                <td colSpan={6} className="table-cell text-center py-8 text-gray-500 dark:text-gray-400">
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                   No products found
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((product) => (
-                <tr key={product.id} className="table-row table-row-hover">
-                  <td className="table-cell">
+              products.map((product) => (
+                <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-dark-700">
+                  <td className="whitespace-nowrap px-6 py-4">
                     <div className="h-10 w-10 overflow-hidden rounded-md">
                       {product.image ? (
                         <img
                           src={product.image}
                           alt={product.title}
                           className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40';
+                          }}
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400 dark:bg-dark-600">
@@ -179,21 +216,33 @@ const ProductsPage: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  <td className="table-cell font-medium">{product.title.split(' ').slice(0, 5).join(' ')}</td>
-                  <td className="table-cell">{getCategoryName(product.category)}</td>
-                  <td className="table-cell">{getBrandName(product.brand)}</td>
-                  <td className="table-cell">₹ {product.price}</td>
-                  <td className="table-cell">
+                  <td className="whitespace-nowrap px-6 py-4 font-medium">
+                    {product.title.length > 30 
+                      ? `${product.title.substring(0, 30)}...` 
+                      : product.title}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    {getCategoryName(product.category)}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    {getBrandName(product.brand)}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    ₹{parseFloat(product.price).toFixed(2)}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button
                         className="rounded-md p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-600"
                         onClick={() => handleEditProduct(product)}
+                        aria-label="Edit product"
                       >
                         <Edit size={16} />
                       </button>
                       <button
                         className="rounded-md p-1 text-error-500 hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
                         onClick={() => handleOpenDeleteModal(product.id)}
+                        aria-label="Delete product"
                       >
                         <Trash size={16} />
                       </button>
@@ -205,6 +254,59 @@ const ProductsPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Showing {products.length} of {pagination.totalItems} products
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn btn-outline"
+              disabled={pagination.currentPage === 1}
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} className="mr-1" />
+              Previous
+            </button>
+            <div className="hidden sm:flex items-center gap-1">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                let pageNum;
+                if (pagination.totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (pagination.currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (pagination.currentPage >= pagination.totalPages - 2) {
+                  pageNum = pagination.totalPages - 4 + i;
+                } else {
+                  pageNum = pagination.currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    className={`btn ${pagination.currentPage === pageNum ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => handlePageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="btn btn-outline"
+              disabled={pagination.currentPage === pagination.totalPages}
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              aria-label="Next page"
+            >
+              Next
+              <ChevronRight size={16} className="ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <ProductModal isOpen={isModalOpen} onClose={handleCloseModal} />
 
